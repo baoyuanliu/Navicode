@@ -1,0 +1,9 @@
+# Ignore all .navicode directories at any level
+.navicode/
+src/.navicode/
+
+# Ignore node_modules directory
+node_modules/
+
+# Ignore all .vsix files
+*.vsix
