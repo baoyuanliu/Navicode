@@ -2,8 +2,12 @@
   "name": "navicode",
   "displayName": "Navicode",
   "description": "Navigate and interact with GPT API for project insights.",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "publisher": "baoyuanl",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/baoyuanliu/Navicode"
+  },
   "engines": {
     "vscode": "^1.75.0"
   },
