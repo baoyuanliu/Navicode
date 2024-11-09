@@ -42,9 +42,8 @@ let history = [];
 let historyFilePath = '';
 /**
  * Initializes the history service by loading existing history or creating a new history file.
- * @param context The extension context.
  */
-function initializeHistory(context) {
+function initializeHistory() {
     const rootDir = (0, utils_1.getWorkspaceRoot)();
     if (!rootDir) {
         logger_1.default.log('Workspace root not found. History will not be initialized.');

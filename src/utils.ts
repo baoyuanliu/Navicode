@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { DependencyGraph } from './types';
+import logger from './logger';
 
 /**
  * Recursively retrieves the project structure, excluding specified directories.
@@ -22,6 +23,7 @@ export function getProjectStructure(
     maxDepth: number = 5
 ): any {
     if (currentDepth > maxDepth) {
+        logger.log(`Max recursion depth reached at directory: ${dir}`);
         return {};
     }
 
@@ -30,6 +32,7 @@ export function getProjectStructure(
     const type = fs.lstatSync(dir).isDirectory() ? 'folder' : 'file';
 
     if (type === 'folder' && excludeDirs.includes(name)) {
+        logger.log(`Excluding directory: ${dir}`);
         return null;
     }
 
@@ -74,6 +77,7 @@ export function getProjectFiles(
     const files: { [key: string]: string } = {};
 
     if (currentDepth > maxDepth) {
+        logger.log(`Max recursion depth reached at directory: ${dir}`);
         return files;
     }
 
@@ -83,11 +87,14 @@ export function getProjectFiles(
     } catch (err) {
         vscode.window.showErrorMessage(`Failed to read directory: ${dir}`);
         console.error(`Failed to read directory: ${dir}`, err);
+        logger.log(`Failed to read directory: ${dir} - Error: ${String(err)}`);
         return files;
     }
 
     const includedExtensions = getIncludedFileExtensions();
     const excludedExtensions = getExcludedFileExtensions();
+    logger.log(`Included file extensions: ${includedExtensions.join(', ')}`);
+    logger.log(`Excluded file extensions: ${excludedExtensions.join(', ')}`);
 
     for (const item of items) {
         const fullPath = path.join(dir, item);
@@ -98,28 +105,34 @@ export function getProjectFiles(
         } catch (err) {
             vscode.window.showErrorMessage(`Failed to get stats for: ${fullPath}`);
             console.error(`Failed to get stats for: ${fullPath}`, err);
+            logger.log(`Failed to get stats for: ${fullPath} - Error: ${String(err)}`);
             continue;
         }
         const type = stat.isDirectory() ? 'folder' : 'file';
 
         if (type === 'folder') {
             if (excludeDirs.includes(item)) {
+                logger.log(`Excluding directory: ${fullPath}`);
                 continue;
             }
             Object.assign(files, getProjectFiles(fullPath, rootDir, excludeDirs, currentDepth + 1, maxDepth));
         } else if (type === 'file') {
             const ext = path.extname(item).toLowerCase();
+            logger.log(`Processing file: ${relativePath} with extension: ${ext}`);
 
             // Apply include/exclude filters
             if (includedExtensions.length > 0 && !includedExtensions.includes(ext)) {
+                logger.log(`Excluding file due to include filter: ${relativePath}`);
                 continue;
             }
             if (excludedExtensions.includes(ext)) {
+                logger.log(`Excluding file due to exclude filter: ${relativePath}`);
                 continue;
             }
 
             const binaryExtensions = ['.exe', '.dll', '.so', '.bin', '.jpg', '.png', '.gif', '.ico', '.svg'];
             if (binaryExtensions.includes(ext)) {
+                logger.log(`Excluding binary file: ${relativePath}`);
                 continue;
             }
             let content: string;
@@ -128,9 +141,11 @@ export function getProjectFiles(
             } catch (err) {
                 vscode.window.showErrorMessage(`Failed to read file: ${fullPath}`);
                 console.error(`Failed to read file: ${fullPath}`, err);
+                logger.log(`Failed to read file: ${fullPath} - Error: ${String(err)}`);
                 continue;
             }
             files[relativePath] = content;
+            logger.log(`Added file for embedding: ${relativePath}`);
         }
     }
 
@@ -145,9 +160,12 @@ export function getWorkspaceRoot(): string {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showErrorMessage('No workspace folder is open.');
+        logger.log('No workspace folder is open.');
         return '';
     }
-    return workspaceFolders[0].uri.fsPath;
+    const rootPath = workspaceFolders[0].uri.fsPath;
+    logger.log(`Workspace root path retrieved: ${rootPath}`);
+    return rootPath;
 }
 
 /**
@@ -158,6 +176,9 @@ export function getApiKey(): string {
     const apiKey = vscode.workspace.getConfiguration('navicode').get('apiKey') as string;
     if (!apiKey) {
         vscode.window.showErrorMessage('GPT API key is not set in the Navicode settings.');
+        logger.log('GPT API key is not set in the settings.');
+    } else {
+        logger.log('GPT API key retrieved from settings.');
     }
     return apiKey;
 }
@@ -168,7 +189,20 @@ export function getApiKey(): string {
  */
 export function getIncludedFileExtensions(): string[] {
     const includes = vscode.workspace.getConfiguration('navicode').get<string[]>('includeFileExtensions') || [];
-    return includes.map(ext => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`);
+    const formattedIncludes = includes.map(ext => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`);
+    logger.log(`Formatted included file extensions: ${formattedIncludes.join(', ')}`);
+    return formattedIncludes;
+}
+
+/**
+ * Retrieves the list of file extensions to include from the extension settings, without leading dots.
+ * @returns An array of included file extensions without dots.
+ */
+export function getIncludedFileExtensionsNoDot(): string[] {
+    const includes = vscode.workspace.getConfiguration('navicode').get<string[]>('includeFileExtensions') || [];
+    const formattedIncludes = includes.map(ext => ext.startsWith('.') ? ext.substring(1).toLowerCase() : ext.toLowerCase());
+    logger.log(`Formatted included file extensions (no dot): ${formattedIncludes.join(', ')}`);
+    return formattedIncludes;
 }
 
 /**
@@ -177,5 +211,18 @@ export function getIncludedFileExtensions(): string[] {
  */
 export function getExcludedFileExtensions(): string[] {
     const excludes = vscode.workspace.getConfiguration('navicode').get<string[]>('excludeFileExtensions') || [];
-    return excludes.map(ext => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`);
+    const formattedExcludes = excludes.map(ext => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`);
+    logger.log(`Formatted excluded file extensions: ${formattedExcludes.join(', ')}`);
+    return formattedExcludes;
+}
+
+/**
+ * Retrieves the list of file extensions to exclude from the extension settings, without leading dots.
+ * @returns An array of excluded file extensions without dots.
+ */
+export function getExcludedFileExtensionsNoDot(): string[] {
+    const excludes = vscode.workspace.getConfiguration('navicode').get<string[]>('excludeFileExtensions') || [];
+    const formattedExcludes = excludes.map(ext => ext.startsWith('.') ? ext.substring(1).toLowerCase() : ext.toLowerCase());
+    logger.log(`Formatted excluded file extensions (no dot): ${formattedExcludes.join(', ')}`);
+    return formattedExcludes;
 }

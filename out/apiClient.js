@@ -341,7 +341,7 @@ function findAllRelatedFiles(prompt, model) {
         logger_1.default.log('Loading file embeddings...');
         const fileEmbeddings = (0, embeddingService_1.loadFileEmbeddings)();
         logger_1.default.log('Loaded File Embeddings:');
-        logger_1.default.logJSON(fileEmbeddings);
+        // logger.logJSON(fileEmbeddings);
         if (Object.keys(fileEmbeddings).length === 0) {
             vscode.window.showInformationMessage('No file embeddings found. Please preprocess embeddings.');
             logger_1.default.log('No file embeddings found. Please preprocess embeddings.');
@@ -355,11 +355,11 @@ function findAllRelatedFiles(prompt, model) {
             return [];
         }
         logger_1.default.log('Prompt Embedding:');
-        logger_1.default.logJSON(promptEmbedding);
+        // logger.logJSON(promptEmbedding);
         // Step 4: Perform Semantic Search
         vscode.window.showInformationMessage('Performing semantic search...');
         logger_1.default.log('Performing semantic search...');
-        const similarFiles = (0, embeddingService_1.findSimilarFiles)(promptEmbedding, fileEmbeddings, 0.7);
+        const similarFiles = (0, embeddingService_1.findSimilarFiles)(promptEmbedding, fileEmbeddings);
         logger_1.default.log('Similar Files:');
         logger_1.default.logJSON(similarFiles);
         if (similarFiles.length === 0) {

@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateDependencyGraph = void 0;
 const madge_1 = __importDefault(require("madge"));
 const vscode = __importStar(require("vscode"));
-const utils_1 = require("./utils"); // Added import for getIncludedFileExtensions
+const utils_1 = require("./utils");
 const logger_1 = __importDefault(require("./logger"));
 /**
  * Generates a dependency graph for the project using Madge.
@@ -48,6 +48,7 @@ const logger_1 = __importDefault(require("./logger"));
 function generateDependencyGraph() {
     return __awaiter(this, void 0, void 0, function* () {
         const rootDir = (0, utils_1.getWorkspaceRoot)();
+        logger_1.default.log(`Workspace root directory: ${rootDir}`);
         if (!rootDir) {
             vscode.window.showErrorMessage('Cannot determine workspace root for dependency analysis.');
             logger_1.default.log('Cannot determine workspace root for dependency analysis.');
@@ -56,9 +57,11 @@ function generateDependencyGraph() {
         try {
             vscode.window.showInformationMessage('Analyzing project dependencies...');
             logger_1.default.log('Analyzing project dependencies...');
+            const includedExtensions = (0, utils_1.getIncludedFileExtensionsNoDot)();
+            logger_1.default.log(`Using included file extensions for Madge: ${includedExtensions.join(', ')}`);
             const result = yield (0, madge_1.default)(rootDir, {
-                fileExtensions: (0, utils_1.getIncludedFileExtensions)(),
-                excludeRegExp: [/node_modules/, /\.test\./, /\.spec\./],
+                fileExtensions: includedExtensions,
+                excludeRegExp: [/node_modules/, /\.test\.[jt]s$/, /\.spec\.[jt]s$/],
             });
             const dependencyGraph = result.obj();
             logger_1.default.log('Dependency Graph:');

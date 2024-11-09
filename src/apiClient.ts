@@ -351,7 +351,7 @@ Please return the list of involved files in the following JSON format:
     }
 }
 
-/**
+/** 
  * Finds all related files based on semantic similarity and dependency graph.
  * @param prompt The user's input prompt.
  * @param model The selected GPT model.
@@ -375,7 +375,7 @@ export async function findAllRelatedFiles(prompt: string, model: SupportedModel)
     logger.log('Loading file embeddings...');
     const fileEmbeddings: FileEmbeddings = loadFileEmbeddings();
     logger.log('Loaded File Embeddings:');
-    logger.logJSON(fileEmbeddings);
+    // logger.logJSON(fileEmbeddings);
 
     if (Object.keys(fileEmbeddings).length === 0) {
         vscode.window.showInformationMessage('No file embeddings found. Please preprocess embeddings.');
@@ -391,12 +391,12 @@ export async function findAllRelatedFiles(prompt: string, model: SupportedModel)
         return [];
     }
     logger.log('Prompt Embedding:');
-    logger.logJSON(promptEmbedding);
+    // logger.logJSON(promptEmbedding);
 
     // Step 4: Perform Semantic Search
     vscode.window.showInformationMessage('Performing semantic search...');
     logger.log('Performing semantic search...');
-    const similarFiles = findSimilarFiles(promptEmbedding, fileEmbeddings, 0.7);
+    const similarFiles = findSimilarFiles(promptEmbedding, fileEmbeddings);
     logger.log('Similar Files:');
     logger.logJSON(similarFiles);
 

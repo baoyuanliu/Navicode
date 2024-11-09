@@ -32,30 +32,42 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = __importStar(require("vscode"));
 const webview_1 = require("./webview");
 const embeddingService_1 = require("./embeddingService");
+const logger_1 = __importDefault(require("./logger"));
 /**
  * Activates the Navicode extension.
  * @param context The extension context.
  */
 function activate(context) {
-    let openPromptDisposable = vscode.commands.registerCommand('navicode.openPrompt', () => {
+    logger_1.default.log('Ok. Activating Navicode extension.');
+    const openPromptDisposable = vscode.commands.registerCommand('navicode.openPrompt', () => {
+        logger_1.default.log('Command "navicode.openPrompt" invoked.');
         (0, webview_1.showWebview)(context);
     });
-    let preprocessEmbeddingsDisposable = vscode.commands.registerCommand('navicode.preprocessEmbeddings', () => __awaiter(this, void 0, void 0, function* () {
+    const preprocessEmbeddingsDisposable = vscode.commands.registerCommand('navicode.preprocessEmbeddings', () => __awaiter(this, void 0, void 0, function* () {
+        logger_1.default.log('Command "navicode.preprocessEmbeddings" invoked.');
         yield (0, embeddingService_1.preprocessEmbeddings)();
         vscode.window.showInformationMessage('File embeddings have been preprocessed.');
+        logger_1.default.log('File embeddings have been preprocessed.');
     }));
     context.subscriptions.push(openPromptDisposable);
     context.subscriptions.push(preprocessEmbeddingsDisposable);
+    logger_1.default.log('Navicode extension activated successfully.');
 }
 exports.activate = activate;
 /**
  * Deactivates the Navicode extension.
  */
-function deactivate() { }
+function deactivate() {
+    logger_1.default.log('Deactivating Navicode extension.');
+    // Perform any necessary cleanup here
+}
 exports.deactivate = deactivate;
 //# sourceMappingURL=extension.js.map

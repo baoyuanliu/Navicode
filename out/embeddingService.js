@@ -49,9 +49,10 @@ const logger_1 = __importDefault(require("./logger"));
  * @returns The embedding vector as an array of numbers.
  */
 function generateEmbedding(text) {
-    var _a, _b;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         const apiKey = (0, utils_1.getApiKey)();
+        logger_1.default.log(`Using API Key: ${apiKey ? '****' : 'None provided'}`);
         if (!apiKey) {
             logger_1.default.log('GPT API key is missing.');
             return [];
@@ -60,66 +61,66 @@ function generateEmbedding(text) {
             vscode.window.showInformationMessage('Generating embedding...');
             logger_1.default.log('Generating embedding...');
             const response = yield axios_1.default.post('https://api.openai.com/v1/embeddings', {
-                model: "text-embedding-3-large",
-                input: text
+                model: 'text-embedding-3-large',
+                input: text,
             }, {
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
-                }
+                    Authorization: `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
             });
-            if (response.data && response.data.data && response.data.data.length > 0) {
-                // Ensure that the embedding is of type number[]
-                const embedding = response.data.data[0].embedding;
-                if (Array.isArray(embedding) && embedding.every((num) => typeof num === 'number')) {
-                    vscode.window.showInformationMessage('Embedding generated successfully.');
-                    logger_1.default.log('Embedding generated successfully.');
-                    return embedding;
-                }
-                else {
-                    vscode.window.showErrorMessage('Invalid embedding format received from Embedding API.');
-                    console.error('Invalid embedding format:', embedding);
-                    logger_1.default.log('Invalid embedding format received from Embedding API.');
-                    return [];
-                }
+            logger_1.default.log('Received response from Embedding API.');
+            const embedding = (_c = (_b = (_a = response.data) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.embedding;
+            if (Array.isArray(embedding) && embedding.every((num) => typeof num === 'number')) {
+                vscode.window.showInformationMessage('Embedding generated successfully.');
+                logger_1.default.log('Embedding generated successfully.');
+                return embedding;
             }
             else {
-                vscode.window.showErrorMessage('Invalid response from Embedding API.');
-                console.error('Invalid response:', response.data);
-                logger_1.default.log('Invalid response from Embedding API.');
+                vscode.window.showErrorMessage('Invalid embedding format received from Embedding API.');
+                console.error('Invalid embedding format:', embedding);
+                logger_1.default.log('Invalid embedding format received from Embedding API.');
                 return [];
             }
         }
         catch (error) {
-            // Log the error details
-            if (axios_1.default.isAxiosError(error)) {
-                const axiosError = error;
-                vscode.window.showErrorMessage('Error generating embedding.');
-                logger_1.default.log('--- Embedding API Error ---');
-                if (axiosError.response) {
-                    logger_1.default.logJSON(axiosError.response.data);
-                    const errorMessage = ((_b = (_a = axiosError.response.data) === null || _a === void 0 ? void 0 : _a.error) === null || _b === void 0 ? void 0 : _b.message) || 'Unknown error';
-                    vscode.window.showErrorMessage('Error generating embedding: ' + errorMessage);
-                }
-                else if (axiosError.request) {
-                    logger_1.default.log('No response received from Embedding API.');
-                    vscode.window.showErrorMessage('No response received from Embedding API. Please check your network connection.');
-                }
-                else {
-                    logger_1.default.log('Error setting up the request.');
-                    vscode.window.showErrorMessage('Error setting up the Embedding API request: ' + axiosError.message);
-                }
-            }
-            else {
-                vscode.window.showErrorMessage('An unexpected error occurred while generating embedding.');
-                logger_1.default.log('--- Unexpected Error ---');
-                logger_1.default.log(error.toString());
-            }
+            handleEmbeddingError(error);
             return [];
         }
     });
 }
 exports.generateEmbedding = generateEmbedding;
+/**
+ * Handles errors during embedding generation.
+ * @param error The error object.
+ */
+function handleEmbeddingError(error) {
+    var _a, _b;
+    logger_1.default.log('Error occurred while generating embedding.');
+    if (axios_1.default.isAxiosError(error)) {
+        const axiosError = error;
+        vscode.window.showErrorMessage('Error generating embedding.');
+        logger_1.default.log('--- Embedding API Error ---');
+        if (axiosError.response) {
+            logger_1.default.logJSON(axiosError.response.data);
+            const errorMessage = ((_b = (_a = axiosError.response.data) === null || _a === void 0 ? void 0 : _a.error) === null || _b === void 0 ? void 0 : _b.message) || 'Unknown error';
+            vscode.window.showErrorMessage(`Error generating embedding: ${errorMessage}`);
+        }
+        else if (axiosError.request) {
+            logger_1.default.log('No response received from Embedding API.');
+            vscode.window.showErrorMessage('No response received from Embedding API. Please check your network connection.');
+        }
+        else {
+            logger_1.default.log('Error setting up the request.');
+            vscode.window.showErrorMessage(`Error setting up the Embedding API request: ${axiosError.message}`);
+        }
+    }
+    else {
+        vscode.window.showErrorMessage('An unexpected error occurred while generating embedding.');
+        logger_1.default.log('--- Unexpected Error ---');
+        logger_1.default.log(error.toString());
+    }
+}
 /**
  * Calculates the cosine similarity between two vectors.
  * @param vecA The first vector.
@@ -128,9 +129,11 @@ exports.generateEmbedding = generateEmbedding;
  */
 function cosineSimilarity(vecA, vecB) {
     const dotProduct = vecA.reduce((sum, a, idx) => sum + a * vecB[idx], 0);
-    const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
-    const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
-    return dotProduct / (magnitudeA * magnitudeB);
+    const magnitudeA = Math.hypot(...vecA);
+    const magnitudeB = Math.hypot(...vecB);
+    const similarity = dotProduct / (magnitudeA * magnitudeB);
+    logger_1.default.log(`Calculated cosine similarity: ${similarity}`);
+    return similarity;
 }
 exports.cosineSimilarity = cosineSimilarity;
 /**
@@ -139,12 +142,14 @@ exports.cosineSimilarity = cosineSimilarity;
  */
 function saveFileEmbeddings(embeddings) {
     const rootDir = (0, utils_1.getWorkspaceRoot)();
+    logger_1.default.log(`Saving embeddings to workspace root: ${rootDir}`);
     if (!rootDir) {
         logger_1.default.log('Cannot determine workspace root for saving embeddings.');
         return;
     }
     const navicodeDir = path.join(rootDir, '.navicode');
     const embeddingsPath = path.join(navicodeDir, 'file-embeddings.json');
+    logger_1.default.log(`Embeddings path: ${embeddingsPath}`);
     try {
         if (!fs.existsSync(navicodeDir)) {
             fs.mkdirSync(navicodeDir, { recursive: true });
@@ -170,21 +175,28 @@ exports.saveFileEmbeddings = saveFileEmbeddings;
  */
 function loadFileEmbeddings() {
     const rootDir = (0, utils_1.getWorkspaceRoot)();
+    logger_1.default.log(`Loading embeddings from workspace root: ${rootDir}`);
     if (!rootDir) {
         logger_1.default.log('Cannot determine workspace root for loading embeddings.');
         return {};
     }
     const embeddingsPath = path.join(rootDir, '.navicode', 'file-embeddings.json');
+    logger_1.default.log(`Embeddings path: ${embeddingsPath}`);
     try {
         if (!fs.existsSync(embeddingsPath)) {
-            logger_1.default.log(`Embeddings file not found at ${embeddingsPath}`);
-            vscode.window.showInformationMessage(`Embeddings file not found at ${embeddingsPath}. Please run the preprocessing command.`);
+            logger_1.default.log(`Embeddings file not found at ${embeddingsPath}. Creating a new one.`);
+            const navicodeDir = path.dirname(embeddingsPath);
+            if (!fs.existsSync(navicodeDir)) {
+                fs.mkdirSync(navicodeDir, { recursive: true });
+                logger_1.default.log(`Created directory: ${navicodeDir}`);
+            }
+            fs.writeFileSync(embeddingsPath, JSON.stringify({}, null, 2), 'utf-8');
+            vscode.window.showInformationMessage(`Created new embeddings file at ${embeddingsPath}.`);
             return {};
         }
         const data = fs.readFileSync(embeddingsPath, 'utf-8');
         const embeddings = JSON.parse(data);
         logger_1.default.log(`Loaded embeddings from ${embeddingsPath}`);
-        logger_1.default.logJSON(embeddings);
         return embeddings;
     }
     catch (error) {
@@ -200,23 +212,49 @@ exports.loadFileEmbeddings = loadFileEmbeddings;
  * Finds similar files based on the prompt embedding.
  * @param promptEmbedding The embedding vector for the prompt.
  * @param fileEmbeddings The embeddings for all files.
- * @param threshold The similarity threshold.
  * @returns A list of similar file paths.
  */
-function findSimilarFiles(promptEmbedding, fileEmbeddings, threshold = 0.7) {
-    const similarFiles = [];
+function findSimilarFiles(promptEmbedding, fileEmbeddings) {
+    logger_1.default.log('Starting semantic search for similar files.');
+    logger_1.default.log(`Prompt Embedding Length: ${promptEmbedding.length}`);
+    logger_1.default.log(`Number of file embeddings: ${Object.keys(fileEmbeddings).length}`);
+    const similarityScores = [];
     for (const [file, embedding] of Object.entries(fileEmbeddings)) {
-        const similarity = cosineSimilarity(promptEmbedding, embedding);
-        if (similarity >= threshold) {
-            similarFiles.push(file);
-            logger_1.default.log(`File "${file}" has similarity ${similarity.toFixed(4)}`);
+        logger_1.default.log(`Processing file: ${file}`);
+        logger_1.default.log(`Embedding Length for ${file}: ${embedding.length}`);
+        if (promptEmbedding.length !== embedding.length) {
+            logger_1.default.log(`Skipping file ${file} due to embedding length mismatch.`);
+            continue;
         }
+        const similarity = cosineSimilarity(promptEmbedding, embedding);
+        logger_1.default.log(`Similarity for ${file}: ${similarity}`);
+        similarityScores.push({ file, similarity });
     }
+    // Sort files by similarity in descending order
+    similarityScores.sort((a, b) => b.similarity - a.similarity);
+    // Compute mean and standard deviation of similarity scores
+    const similarities = similarityScores.map((item) => item.similarity);
+    const meanSimilarity = similarities.reduce((sum, val) => sum + val, 0) / similarities.length;
+    const stdDevSimilarity = Math.sqrt(similarities.reduce((sum, val) => sum + Math.pow((val - meanSimilarity), 2), 0) /
+        similarities.length);
+    logger_1.default.log(`Mean Similarity: ${meanSimilarity}`);
+    logger_1.default.log(`Standard Deviation of Similarity: ${stdDevSimilarity}`);
+    // Set threshold as mean + k * stdDev
+    const k = 0.5; // Adjust this value to include more or fewer files
+    const dynamicThreshold = meanSimilarity + k * stdDevSimilarity;
+    logger_1.default.log(`Dynamic Threshold (Mean + ${k} * StdDev): ${dynamicThreshold}`);
+    // Include all files with similarity above the dynamic threshold
+    const similarFiles = similarityScores
+        .filter((item) => item.similarity >= dynamicThreshold)
+        .map((item) => item.file);
+    logger_1.default.log(`Files selected based on dynamic threshold:`);
+    logger_1.default.logJSON(similarFiles);
     return similarFiles;
 }
 exports.findSimilarFiles = findSimilarFiles;
 /**
  * Preprocesses and generates embeddings for all project files.
+ * Implements caching to avoid regenerating embeddings for unchanged files.
  */
 function preprocessEmbeddings() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -227,7 +265,8 @@ function preprocessEmbeddings() {
             return;
         }
         const projectFiles = (0, utils_1.getProjectFiles)(rootDir, rootDir);
-        const embeddings = {};
+        logger_1.default.log(`Number of project files to preprocess: ${Object.keys(projectFiles).length}`);
+        const embeddings = loadFileEmbeddings();
         const totalFiles = Object.keys(projectFiles).length;
         if (totalFiles === 0) {
             vscode.window.showErrorMessage('No project files found to preprocess.');
@@ -238,33 +277,34 @@ function preprocessEmbeddings() {
         logger_1.default.log(`Starting preprocessing of ${totalFiles} files...`);
         console.log(`Starting preprocessing of ${totalFiles} files...`);
         let processedFiles = 0;
+        let embeddingsUpdated = false;
         for (const [filePath, content] of Object.entries(projectFiles)) {
             processedFiles++;
-            yield vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Preprocessing embeddings (${processedFiles}/${totalFiles})`,
-                cancellable: false
-            }, (progress) => __awaiter(this, void 0, void 0, function* () {
-                progress.report({ increment: (100 / totalFiles) });
-                vscode.window.showInformationMessage(`Processing file (${processedFiles}/${totalFiles}): ${filePath}`);
-                logger_1.default.log(`Processing file (${processedFiles}/${totalFiles}): ${filePath}`);
-                console.log(`Processing file (${processedFiles}/${totalFiles}): ${filePath}`);
-                const embedding = yield generateEmbedding(content);
-                if (embedding.length > 0) {
-                    embeddings[filePath] = embedding;
-                    logger_1.default.log(`Embedding generated for ${filePath}`);
-                }
-                else {
-                    logger_1.default.log(`Failed to generate embedding for ${filePath}`);
-                }
-            }));
+            logger_1.default.log(`Processing file ${processedFiles}/${totalFiles}: ${filePath}`);
+            // Check if embedding already exists to avoid redundant API calls
+            if (embeddings[filePath]) {
+                // Optionally, implement a file hash check to ensure the file hasn't changed
+                logger_1.default.log(`Skipping embedding for ${filePath} as it already exists.`);
+                continue;
+            }
+            const embedding = yield generateEmbedding(content);
+            if (embedding.length > 0) {
+                embeddings[filePath] = embedding;
+                embeddingsUpdated = true;
+                logger_1.default.log(`Embedding generated for ${filePath}`);
+            }
+            else {
+                logger_1.default.log(`Failed to generate embedding for ${filePath}`);
+            }
+            vscode.window.showInformationMessage(`Processed file (${processedFiles}/${totalFiles}): ${filePath}`);
         }
-        if (Object.keys(embeddings).length > 0) {
+        if (embeddingsUpdated) {
+            logger_1.default.log('Saving generated embeddings.');
             saveFileEmbeddings(embeddings);
         }
         else {
-            vscode.window.showErrorMessage('No embeddings were generated. Please ensure your API key is correct and you have network connectivity.');
-            logger_1.default.log('No embeddings were generated.');
+            vscode.window.showInformationMessage('No new embeddings were generated.');
+            logger_1.default.log('No new embeddings were generated.');
         }
     });
 }

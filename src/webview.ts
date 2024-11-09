@@ -269,15 +269,21 @@ function getWebviewContent(): string {
                 .history-entry {
                     border-bottom: 1px solid #ccc;
                     padding: 10px 0;
+                    cursor: pointer;
                 }
                 .history-entry:last-child {
                     border-bottom: none;
                 }
-                .history-prompt {
-                    font-weight: bold;
+                .history-entry:hover {
+                    background-color: #f9f9f9;
                 }
-                .history-response {
-                    margin-top: 5px;
+                .history-title {
+                    font-weight: bold;
+                    color: #007acc;
+                }
+                .history-date {
+                    font-size: 12px;
+                    color: #666;
                 }
             </style>
             <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
@@ -294,7 +300,10 @@ function getWebviewContent(): string {
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                 <option value="gpt-4">GPT-4</option>
             </select>
-            <button onclick="sendPrompt()">Send Prompt</button>
+            <div style="margin-top: 10px;">
+                <button onclick="sendPrompt()">Send Prompt</button>
+                <button onclick="startNewChat()" style="margin-left: 10px; background-color: #28a745;">Start New Chat</button>
+            </div>
             <div class="loading" id="loading"></div>
             <div class="output markdown-body" id="output"></div>
             <div class="files" id="filesSection" style="display:none;">
@@ -335,6 +344,15 @@ function getWebviewContent(): string {
                     }
                     showLoading();
                     vscode.postMessage({ command: 'sendPrompt', prompt: prompt, model: model });
+                }
+
+                function startNewChat() {
+                    if (confirm('Are you sure you want to start a new chat? This will clear the current prompt and output.')) {
+                        document.getElementById('promptInput').value = '';
+                        document.getElementById('output').innerHTML = '';
+                        document.getElementById('filesSection').style.display = 'none';
+                        // Optionally, you can also clear history or reset other UI elements here
+                    }
                 }
 
                 function displayFiles(files) {
@@ -452,23 +470,35 @@ function getWebviewContent(): string {
                         return;
                     }
 
-                    history.forEach(entry => {
+                    history.forEach((entry, index) => {
                         const entryDiv = document.createElement('div');
                         entryDiv.className = 'history-entry';
+                        entryDiv.dataset.index = index;
 
-                        const promptP = document.createElement('p');
-                        promptP.className = 'history-prompt';
-                        promptP.innerText = \`Prompt (\${new Date(entry.timestamp).toLocaleString()}): \${entry.prompt}\`;
+                        const titleDiv = document.createElement('div');
+                        titleDiv.className = 'history-title';
+                        titleDiv.innerText = entry.prompt.length > 50 ? entry.prompt.substring(0, 50) + '...' : entry.prompt;
 
-                        const responseP = document.createElement('p');
-                        responseP.className = 'history-response';
-                        responseP.innerText = \`Response: \${entry.response}\`;
+                        const dateDiv = document.createElement('div');
+                        dateDiv.className = 'history-date';
+                        dateDiv.innerText = new Date(entry.timestamp).toLocaleString();
 
-                        entryDiv.appendChild(promptP);
-                        entryDiv.appendChild(responseP);
+                        entryDiv.appendChild(titleDiv);
+                        entryDiv.appendChild(dateDiv);
+
+                        entryDiv.onclick = () => {
+                            loadHistoryEntry(entry);
+                        };
 
                         historyContainer.appendChild(entryDiv);
                     });
+                }
+
+                function loadHistoryEntry(entry) {
+                    document.getElementById('promptInput').value = entry.prompt;
+                    document.getElementById('output').innerHTML = marked.parse(entry.response);
+                    Prism.highlightAll();
+                    document.getElementById('filesSection').style.display = 'none';
                 }
 
                 window.addEventListener('message', event => {
